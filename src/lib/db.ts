@@ -30,7 +30,9 @@ export const DEFAULT_SETTINGS: Settings = {
   postCountry: 'FR',
   postCity: 'Paris',
   homeCountry: 'NO',
+  address: '',
   postingStart: '2026-08-05',
+  serviceStart: '2026-08-10',
   initialCountry: 'FR',
   travelDayCountsBoth: true,
   rules: RULE_DEFS.map((r) => ({ id: r.id, enabled: r.defaultEnabled, params: { ...r.defaultParams } })),
@@ -50,6 +52,7 @@ export function normalizeSettings(raw: Partial<Settings> | undefined): Settings 
     }
   })
   s.customAirports = raw?.customAirports ?? {}
+  if (!s.serviceStart) s.serviceStart = s.postingStart
   return s
 }
 

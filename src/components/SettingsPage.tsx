@@ -82,6 +82,10 @@ export function SettingsPage({ settings, onChange }: { settings: Settings; onCha
             <input value={draft.postedPartnerName} onChange={(e) => set('postedPartnerName', e.target.value)} placeholder="Pål …" />
           </label>
         </div>
+        <label className="field" style={{ marginTop: 12 }}>
+          Fast adresse på tjenestestedet (vises i rapporten)
+          <input value={draft.address} onChange={(e) => set('address', e.target.value)} placeholder="Gate og nummer, postnummer by, land" autoComplete="street-address" />
+        </label>
       </div>
 
       <div className="card">
@@ -112,8 +116,12 @@ export function SettingsPage({ settings, onChange }: { settings: Settings; onCha
             </select>
           </label>
           <label className="field">
-            Utsendelsen startet
+            Flyttet inn på tjenestestedet (dagsloggen starter her)
             <input type="date" value={draft.postingStart} onChange={(e) => set('postingStart', e.target.value)} />
+          </label>
+          <label className="field">
+            Den utsendtes første arbeidsdag (UD-tellingen starter her)
+            <input type="date" value={draft.serviceStart} onChange={(e) => set('serviceStart', e.target.value)} />
           </label>
           <label className="field">
             Utsendelsen slutter (valgfritt)

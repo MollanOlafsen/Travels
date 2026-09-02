@@ -184,7 +184,7 @@ export const RULE_DEFS: RuleDef[] = [
     defaultParams: { minShare: 50, warnMarginDays: 14 },
     paramLabels: { minShare: 'Minste andel av året på tjenestestedet (%)', warnMarginDays: 'Varsle når færre enn (dager) igjen å være borte' },
     description:
-      'Forhøyet utenlandstillegg (det «medfølgende bidraget») forutsetter at medfølgende ektefelle/samboer er «fast bosatt» på tjenestestedet. Særavtalen definerer fast bosatt som faktisk opphold på tjenestestedet i minst halvparten av den utsendtes tjenestetid i hvert kalenderår. Skjer utflyttingen i andre halvår, måles det første året bare over det halvåret. Appen teller dager med opphold i Frankrike (reisedager teller med) mot antall tjenestedager i året.',
+      'Forhøyet utenlandstillegg (det «medfølgende bidraget») forutsetter at medfølgende ektefelle/samboer er «fast bosatt» på tjenestestedet. Særavtalen definerer fast bosatt som faktisk opphold på tjenestestedet i minst halvparten av den utsendtes tjenestetid i hvert kalenderår. Skjer utflyttingen i andre halvår, måles det første året bare over det halvåret. Appen teller dager med opphold i Frankrike (reisedager teller med) mot antall tjenestedager i året. Tjenestetiden regnes fra den utsendtes tiltredelsesdato (§ 6.1: tillegg for medfølgende gis fra ankomstdagen, men ikke tidligere enn tiltredelsen) – sett datoen under Innstillinger.',
     quote:
       '«Med fast bosatt menes et faktisk opphold på tjenestestedet i minst halvparten av den utsendtes tjenestetid i hvert kalenderår, jf. § 2.1. Når utflyttingen etter første ledd skjer i kalenderårets andre halvår menes med fast bosatt et faktisk opphold på tjenestestedet i minst halvparten av den utsendtes tjenestetid i dette halvåret.» – Særavtalen 2026–2028, Definisjoner',
     sources: [
@@ -342,14 +342,15 @@ export function evaluateRules(segments: Segment[], settings: Settings, today: st
       case 'ud_fast_bosatt': {
         const minShare = num(P, 'minShare', 50)
         const margin = num(P, 'warnMarginDays', 14)
-        // Måleperiode: tjenestetiden i kalenderåret (første år: fra utsendelsesdato)
-        const periodStart = ys.from
+        // Måleperiode: den utsendtes tjenestetid i kalenderåret (første år: fra tiltredelsesdato, § 6.1)
+        const serviceStart = settings.serviceStart || settings.postingStart
+        const periodStart = [`${year}-01-01`, serviceStart].sort().pop()!
         const periodEnd = [`${year}-12-31`, settings.postingEnd ?? '9999'].sort()[0]
         const totalDays = differenceInCalendarDays(parseISO(periodEnd), parseISO(periodStart)) + 1
-        const elapsed = differenceInCalendarDays(parseISO(today), parseISO(periodStart)) + 1
+        const elapsed = Math.max(0, differenceInCalendarDays(parseISO(today), parseISO(periodStart)) + 1)
         const remaining = Math.max(0, totalDays - elapsed)
         const required = Math.ceil((totalDays * minShare) / 100)
-        const atPost = ys.post
+        const atPost = daysIn(p, post, periodStart, today)
         const canStillBeAway = remaining - Math.max(0, required - atPost)
         const shareSoFar = elapsed > 0 ? Math.round((atPost / elapsed) * 100) : 100
         let status: RuleStatus = 'ok'

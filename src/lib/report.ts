@@ -119,9 +119,14 @@ export async function buildPdf(
     doc.text(`Medfølgende ektefelle til ${s.postedPartnerName}, utsendt til ${postName}`, margin, y)
     y += 6
   }
+  if (s.address) {
+    doc.text(`Fast adresse: ${s.address}`, margin, y)
+    y += 6
+  }
   doc.text(`Periode: ${fmtDate(opts.from)} – ${fmtDate(opts.to)}`, margin, y)
   y += 6
-  doc.text(`Utsendelsen startet ${fmtDate(s.postingStart)}. Hele og deler av døgn teller som opphold i et land.`, margin, y)
+  const svc = s.serviceStart && s.serviceStart !== s.postingStart ? ` Den utsendtes tiltredelse ${fmtDate(s.serviceStart)}.` : ''
+  doc.text(`Innflytting på tjenestestedet ${fmtDate(s.postingStart)}.${svc} Hele og deler av døgn teller som opphold i et land.`, margin, y)
   y += 9
 
   // Sammendrag per måned

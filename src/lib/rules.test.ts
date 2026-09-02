@@ -8,7 +8,9 @@ const settings: Settings = {
   postCountry: 'FR',
   postCity: 'Paris',
   homeCountry: 'NO',
+  address: '',
   postingStart: '2026-08-05',
+  serviceStart: '2026-08-10',
   initialCountry: 'FR',
   travelDayCountsBoth: true,
   rules: RULE_DEFS.map((r) => ({ id: r.id, enabled: true, params: { ...r.defaultParams } })),
@@ -107,6 +109,13 @@ describe('evaluateRules', () => {
     expect(r.detail).toContain('11.11.2026')
     const late = evaluateRules(segs, settings, '2026-11-12').find((x) => x.id === 'ud_absence_3m')!
     expect(late.status).toBe('critical')
+  })
+
+  it('teller tjenestetiden fra tiltredelsesdato', () => {
+    const r = evaluateRules([], settings, '2026-09-02').find((x) => x.id === 'ud_fast_bosatt')!
+    expect(r.value).toBe('24 av 144 dager')
+    expect(r.detail).toContain('minst 72 dager')
+    expect(r.detail).toContain('10.8.2026–31.12.2026')
   })
 
   it('slår kritisk når 50 %-kravet ikke lenger kan nås', () => {

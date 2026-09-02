@@ -64,8 +64,12 @@ export interface Settings {
   postCity: string
   /** Hjemlandet for skatt/pendling – NO */
   homeCountry: string
-  /** Første dag i utsendelsen (YYYY-MM-DD) */
+  /** Fast adresse på tjenestestedet (vises i rapporten) */
+  address: string
+  /** Dagen du flyttet inn på tjenestestedet – dagsloggen starter her (YYYY-MM-DD) */
   postingStart: string
+  /** Den utsendtes tiltredelsesdato – UD-tellingen («tjenestetid») starter her (særavtalen § 6.1) */
+  serviceStart: string
   postingEnd?: string
   /** Hvor man var ved postingStart */
   initialCountry: string
