@@ -196,7 +196,7 @@ export function ReportPage({ segments, settings }: { segments: Segment[]; settin
       <div className="card">
         <div className="eyebrow">Sikkerhetskopi</div>
         <p className="small muted">
-          Dataene ligger i databasen på mollan-olafsen.fr. Last likevel ned en kopi (JSON med bilder) et par ganger i året og legg den i iCloud/OneDrive. Gjenopprett under Innstillinger.
+          Dataene ligger i databasen på serveren din. Last likevel ned en kopi (JSON med bilder) et par ganger i året og legg den i iCloud/OneDrive. Gjenopprett under Innstillinger.
         </p>
         <button className="btn" onClick={backup} disabled={busy !== null}>
           <Icon name="download" size={18} />

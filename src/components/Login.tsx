@@ -41,7 +41,7 @@ export function Login({ setupNeeded }: { setupNeeded: boolean }) {
                 <a href={`${API_BASE}setup.php`}>api/setup.php</a>
               </>
             ) : (
-              'Dataene dine ligger i databasen på mollan-olafsen.fr og er bare tilgjengelige etter innlogging.'
+              'Dataene dine ligger i databasen på serveren din og er bare tilgjengelige etter innlogging.'
             )}
           </p>
         </div>

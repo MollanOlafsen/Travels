@@ -261,7 +261,7 @@ export function SettingsPage({ settings, onChange }: { settings: Settings; onCha
       <div className="card">
         <div className="eyebrow">Data</div>
         <p className="small muted">
-          Kilden er databasen på mollan-olafsen.fr. Denne enheten har en lokal kopi for offline-bruk som synkroniseres automatisk.
+          Kilden er databasen på serveren din. Denne enheten har en lokal kopi for offline-bruk som synkroniseres automatisk.
           {sync.pending > 0 ? ` ${sync.pending} endring${sync.pending === 1 ? '' : 'er'} venter på sending.` : ' Alt er synkronisert.'}
         </p>
         <div className="row">
