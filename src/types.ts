@@ -59,6 +59,8 @@ export interface Settings {
   name: string
   /** Den utsendtes navn (for rapporten til ambassaden) */
   postedPartnerName: string
+  /** Utenriksstasjonen den utsendte tjenestegjør ved, f.eks. «Norges ambassade i Paris» */
+  station: string
   /** Tjenestested */
   postCountry: string
   postCity: string

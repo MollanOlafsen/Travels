@@ -27,6 +27,7 @@ export const db = new TraveldaysDB()
 export const DEFAULT_SETTINGS: Settings = {
   name: '',
   postedPartnerName: '',
+  station: 'Norges ambassade i Paris',
   postCountry: 'FR',
   postCity: 'Paris',
   homeCountry: 'NO',

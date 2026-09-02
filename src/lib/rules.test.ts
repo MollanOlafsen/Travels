@@ -5,6 +5,7 @@ import { RULE_DEFS, absencesFrom, computePresence, daysIn, evaluateRules, homeVi
 const settings: Settings = {
   name: 'Roger',
   postedPartnerName: 'Pål',
+  station: 'Norges ambassade i Paris',
   postCountry: 'FR',
   postCity: 'Paris',
   homeCountry: 'NO',

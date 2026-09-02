@@ -7,6 +7,7 @@ import { computePresence } from './rules'
 const settings: Settings = {
   name: 'Roger Mollan-Olafsen',
   postedPartnerName: 'Pål',
+  station: 'Norges ambassade i Paris',
   postCountry: 'FR',
   postCity: 'Paris',
   homeCountry: 'NO',

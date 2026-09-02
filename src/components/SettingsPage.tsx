@@ -81,6 +81,10 @@ export function SettingsPage({ settings, onChange }: { settings: Settings; onCha
             Den utsendtes navn
             <input value={draft.postedPartnerName} onChange={(e) => set('postedPartnerName', e.target.value)} placeholder="Pål …" />
           </label>
+          <label className="field">
+            Utenriksstasjon
+            <input value={draft.station} onChange={(e) => set('station', e.target.value)} placeholder="Norges ambassade i Paris" />
+          </label>
         </div>
         <label className="field" style={{ marginTop: 12 }}>
           Fast adresse på tjenestestedet (vises i rapporten)

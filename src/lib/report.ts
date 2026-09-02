@@ -115,8 +115,9 @@ export async function buildPdf(
   doc.text(s.name || '(navn ikke satt)', margin, y)
   doc.setFont('helvetica', 'normal')
   y += 6
-  if (s.postedPartnerName) {
-    doc.text(`Medfølgende ektefelle til ${s.postedPartnerName}, utsendt til ${postName}`, margin, y)
+  if (s.postedPartnerName || s.station) {
+    const who = s.postedPartnerName ? `Medfølgende ektefelle til ${s.postedPartnerName}, ` : 'Medfølgende ektefelle, '
+    doc.text(`${who}utsendt til ${s.station || postName}`, margin, y)
     y += 6
   }
   if (s.address) {
