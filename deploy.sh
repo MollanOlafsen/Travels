@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Bygger Traveldays og deployer til Domeneshop (~/travels) over SSH.
+# Bygger Traveldays og deployer til Domeneshop-webhotellet for mollan-olafsen.no (~/travels) over SSH.
 # Bevarer alltid ~/travels_private (config + krypterte bilder) – den ligger utenfor webroten og røres aldri.
 set -euo pipefail
 cd "$(dirname "$0")"
 
-HOST="mollan-olafsenfr@login.domeneshop.no"
+HOST="${TD_HOST:-mollan-olafsenno@login.domeneshop.no}"
 KEY="$HOME/.ssh/id_ed25519_domeneshop"
 REMOTE_DIR="travels"
 
