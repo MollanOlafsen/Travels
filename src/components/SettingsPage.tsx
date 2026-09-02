@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import QRCode from 'qrcode'
 import type { Settings } from '../types'
 import { db, dataUrlToBlob, normalizeSettings, uid, wipeLocal, type Backup } from '../lib/db'
-import { api, errorText, logout } from '../lib/api'
+import { ApiError, api, errorText, logout } from '../lib/api'
 import { flush, getSyncState, setSyncState, store, useSync } from '../lib/sync'
 import { COUNTRY_CODES, countryName } from '../lib/airports'
 import { useToast } from './Toast'
@@ -309,6 +309,8 @@ function SecurityCard() {
   const [totp, setTotp] = useState<{ secret: string; otpauth: string; qr: string } | null>(null)
   const [code, setCode] = useState('')
   const [disablePw, setDisablePw] = useState('')
+  const [dbCur, setDbCur] = useState('')
+  const [dbNew, setDbNew] = useState('')
   const [busy, setBusy] = useState(false)
   const [audit, setAudit] = useState<Array<{ ts: number; event: string; ua: string; detail: string | null }> | null>(null)
 
@@ -372,6 +374,20 @@ function SecurityCard() {
     }
   }
 
+  async function changeDbPassword() {
+    setBusy(true)
+    try {
+      await api('security.php', { body: { op: 'db_password', password: dbCur, dbPassword: dbNew } })
+      setDbCur('')
+      setDbNew('')
+      toast('Databasepassordet er oppdatert.')
+    } catch (e) {
+      toast(e instanceof ApiError && e.code === 'db_connect_failed' ? 'Databasen avviste passordet – ingenting er endret.' : errorText(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function revokeOthers() {
     try {
       await api('security.php', { body: { op: 'sessions_revoke_others' } })
@@ -401,6 +417,7 @@ function SecurityCard() {
     totp_disabled: 'Tofaktor slått av',
     sessions_revoked: 'Andre enheter logget ut',
     backup_downloaded: 'Sikkerhetskopi lastet ned',
+    db_password_changed: 'Databasepassord oppdatert',
   }
 
   return (
@@ -470,6 +487,26 @@ function SecurityCard() {
         </div>
         <button className="btn" style={{ marginTop: 10 }} onClick={changePassword} disabled={busy || !cur || !pw1}>
           Bytt passord
+        </button>
+      </details>
+
+      <details>
+        <summary className="small">Bytt databasepassord (etter endring i Domeneshop)</summary>
+        <p className="small muted" style={{ margin: '8px 0' }}>
+          Endre først passordet for databasen i Domeneshop-panelet, og lim det inn her. Appen tester tilkoblingen før den lagres i konfigurasjonen på serveren.
+        </p>
+        <div className="form-grid">
+          <label className="field">
+            App-passordet ditt
+            <input type="password" autoComplete="current-password" value={dbCur} onChange={(e) => setDbCur(e.target.value)} />
+          </label>
+          <label className="field">
+            Nytt databasepassord
+            <input type="password" autoComplete="off" value={dbNew} onChange={(e) => setDbNew(e.target.value)} />
+          </label>
+        </div>
+        <button className="btn" style={{ marginTop: 10 }} onClick={changeDbPassword} disabled={busy || !dbCur || !dbNew}>
+          Oppdater databasepassord
         </button>
       </details>
 

@@ -71,6 +71,29 @@ if ($op === 'totp_disable') {
     td_json(['ok' => true]);
 }
 
+if ($op === 'db_password') {
+    // Bytt databasepassord etter at det er endret i Domeneshop-panelet. Tester tilkoblingen før config skrives.
+    if (!password_verify((string) ($b['password'] ?? ''), $cfg['password_hash'])) {
+        sleep(1);
+        td_json(['error' => 'bad_credentials'], 401);
+    }
+    $new = (string) ($b['dbPassword'] ?? '');
+    if ($new === '') {
+        td_json(['error' => 'bad_request'], 400);
+    }
+    $d = $cfg['db'];
+    try {
+        $test = new PDO("mysql:host={$d['host']};dbname={$d['name']};charset=utf8mb4", $d['user'], $new, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        $test->query('SELECT 1');
+    } catch (Throwable $e) {
+        td_json(['error' => 'db_connect_failed', 'detail' => $e->getMessage()], 400);
+    }
+    $cfg['db']['pass'] = $new;
+    td_write_config($cfg);
+    td_audit('db_password_changed');
+    td_json(['ok' => true]);
+}
+
 if ($op === 'sessions_revoke_others') {
     $keep = td_session_id_from_cookie();
     td_db()->prepare('DELETE FROM td_sessions WHERE id <> ?')->execute([$keep]);
