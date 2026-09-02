@@ -1,4 +1,5 @@
-// Datamodell for Traveldays. Alle data lagres lokalt (IndexedDB) – ingen server.
+// Datamodell for Traveldays. Kilden til sannhet er MySQL-databasen på Domeneshop;
+// nettleseren har en lokal kopi (IndexedDB) for offline-bruk som synkroniseres automatisk.
 
 export type Source = 'barcode' | 'ocr' | 'manual'
 
@@ -21,21 +22,26 @@ export interface Segment {
   seat?: string
   passenger?: string
   source: Source
-  /** Peker til bilde av boardingkortet i images-tabellen */
-  imageId?: number
+  /** Peker til bilde av boardingkortet (uuid) */
+  imageId?: string
   note?: string
   createdAt: number
+  /** Sist endret (ms) – brukes til synkronisering («siste skriver vinner») */
+  updatedAt: number
   /** Rekkefølge på samme dato (0 = først) */
   order: number
 }
 
 export interface StoredImage {
-  id?: number
-  blob: Blob
+  id: string
+  /** Selve bildet – mangler lokalt inntil det er hentet fra serveren */
+  blob?: Blob
   name: string
+  mime: string
   width: number
   height: number
   createdAt: number
+  updatedAt: number
   /** Rå strekkodetekst hvis lest */
   rawBarcode?: string
   /** OCR-tekst hvis kjørt */
@@ -84,4 +90,12 @@ export interface Settings {
   rules: RuleConfig[]
   /** Egendefinerte flyplasser: IATA → land */
   customAirports: Record<string, { country: string; city: string }>
+}
+
+/** Kø av endringer som skal sendes til serveren (offline-støtte). */
+export interface OutboxItem {
+  seq?: number
+  kind: 'segment' | 'segmentDelete' | 'image' | 'imageDelete' | 'settings'
+  id?: string
+  ts: number
 }

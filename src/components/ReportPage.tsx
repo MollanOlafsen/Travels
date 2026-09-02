@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import type { Segment, Settings, StoredImage } from '../types'
-import { db, exportBackup } from '../lib/db'
+import { db, exportLocalBackup } from '../lib/db'
+import { API_BASE } from '../lib/api'
+import { getImageBlob } from '../lib/sync'
 import { countryName } from '../lib/airports'
 import { computePresence, todayISO } from '../lib/rules'
 import { buildPdf, daysCsv, deliverFile, monthRows, tripsCsv } from '../lib/report'
@@ -39,8 +41,15 @@ export function ReportPage({ segments, settings }: { segments: Segment[]; settin
   async function pdf() {
     setBusy('pdf')
     try {
-      const imgs = new Map<number, StoredImage>()
-      if (includeImages) for (const i of await db.images.toArray()) imgs.set(i.id!, i)
+      const imgs = new Map<string, StoredImage>()
+      if (includeImages) {
+        const ids = new Set(segments.filter((s) => s.date >= range.from && s.date <= range.to && s.imageId).map((s) => s.imageId!))
+        for (const id of ids) {
+          const meta = await db.photos.get(id)
+          const blob = await getImageBlob(id)
+          if (meta && blob) imgs.set(id, { ...meta, blob })
+        }
+      }
       const blob = await buildPdf(segments, imgs, settings, { ...range, includeRules, includeDays, includeImages }, today)
       const r = await deliverFile(blob, `${fileBase}.pdf`, 'Reisedagslogg')
       if (r !== 'cancelled') toast(r === 'shared' ? 'Rapporten er delt.' : 'PDF-en er lastet ned.')
@@ -62,8 +71,15 @@ export function ReportPage({ segments, settings }: { segments: Segment[]; settin
   async function backup() {
     setBusy('backup')
     try {
-      const b = await exportBackup()
-      const blob = new Blob([JSON.stringify(b)], { type: 'application/json' })
+      let blob: Blob
+      try {
+        const res = await fetch(`${API_BASE}backup.php`, { credentials: 'same-origin' })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        blob = await res.blob()
+      } catch {
+        toast('Serveren svarte ikke – lager lokal kopi i stedet.')
+        blob = new Blob([JSON.stringify(await exportLocalBackup())], { type: 'application/json' })
+      }
       const r = await deliverFile(blob, `traveldays-sikkerhetskopi-${today}.json`, 'Traveldays sikkerhetskopi')
       if (r !== 'cancelled') toast('Sikkerhetskopien er lagret.')
     } finally {
@@ -180,7 +196,7 @@ export function ReportPage({ segments, settings }: { segments: Segment[]; settin
       <div className="card">
         <div className="eyebrow">Sikkerhetskopi</div>
         <p className="small muted">
-          Alle data ligger bare i denne nettleseren. Ta jevnlig en sikkerhetskopi (JSON med bilder) og legg den i iCloud/OneDrive. Gjenopprett under Innstillinger.
+          Dataene ligger i databasen på mollan-olafsen.fr. Last likevel ned en kopi (JSON med bilder) et par ganger i året og legg den i iCloud/OneDrive. Gjenopprett under Innstillinger.
         </p>
         <button className="btn" onClick={backup} disabled={busy !== null}>
           <Icon name="download" size={18} />

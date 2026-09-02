@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Settings, Source } from '../types'
 import { db, uid } from '../lib/db'
+import { store } from '../lib/sync'
 import { bcbpToDrafts, downscale, findBcbp, guessFromOcr, runOcr, scanBarcodes, type BarcodeHit } from '../lib/scan'
 import { todayISO } from '../lib/rules'
 import { countryName, lookupAirport } from '../lib/airports'
@@ -103,30 +104,35 @@ export function AddTrip({ settings, onDone }: { settings: Settings; onDone: () =
   async function saveAll(drafts: SegmentDraft[], source: Source, withImage: boolean) {
     setSaving(true)
     try {
-      let imageId: number | undefined
+      let imageId: string | undefined
+      const now = Date.now()
       if (withImage && state) {
-        imageId = (await db.images.add({
+        imageId = uid()
+        await store.addImage({
+          id: imageId,
           blob: state.blob,
-          name: state.file.name,
+          name: state.file.name || 'boardingkort.jpg',
+          mime: state.blob.type || 'image/jpeg',
           width: state.width,
           height: state.height,
-          createdAt: Date.now(),
+          createdAt: now,
+          updatedAt: now,
           rawBarcode: state.rawBarcode,
           ocrText: state.ocrText,
-        })) as number
+        })
       }
-      const now = Date.now()
       const byDate = new Map<string, number>()
       for (const d of drafts) {
         const existing = await db.segments.where('date').equals(d.date).count()
         const n = (byDate.get(d.date) ?? existing) + 1
         byDate.set(d.date, n)
-        await db.segments.add({
+        await store.putSegment({
           ...d,
           id: uid(),
           source: d.source ?? source,
           imageId,
           createdAt: now,
+          updatedAt: now,
           order: n - 1,
           carrier: d.carrier || undefined,
           flight: d.flight || undefined,

@@ -30,6 +30,7 @@ const seg = (date: string, from: string, to: string, extra: Partial<Segment> = {
   toCountry: to === 'OSL' ? 'NO' : to === 'CDG' ? 'FR' : 'IT',
   source: 'manual',
   createdAt: n,
+  updatedAt: n,
   order: 0,
   ...extra,
 })

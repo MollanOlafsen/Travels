@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Segment, Settings, Source } from '../types'
 import { AIRPORTS, COUNTRY_CODES, countryName, lookupAirport } from '../lib/airports'
 
-export type SegmentDraft = Omit<Segment, 'id' | 'createdAt' | 'order' | 'source'> & { source?: Source }
+export type SegmentDraft = Omit<Segment, 'id' | 'createdAt' | 'updatedAt' | 'order' | 'source'> & { source?: Source }
 
 export const emptyDraft = (date: string, settings: Settings, fromCountry?: string): SegmentDraft => ({
   date,

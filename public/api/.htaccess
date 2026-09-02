@@ -1,0 +1,9 @@
+# Traveldays API
+<FilesMatch "^(lib|config)\.php$">
+  Require all denied
+</FilesMatch>
+<IfModule mod_headers.c>
+  Header always set X-Robots-Tag "noindex, nofollow, noarchive"
+  Header always set Cache-Control "no-store"
+</IfModule>
+Options -Indexes

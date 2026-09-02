@@ -23,8 +23,8 @@ const settings: Settings = {
 }
 
 const segs: Segment[] = [
-  { id: 'a', date: '2026-08-20', from: 'CDG', to: 'OSL', fromCountry: 'FR', toCountry: 'NO', carrier: 'SK', flight: '4703', source: 'barcode', createdAt: 1, order: 0 },
-  { id: 'b', date: '2026-08-28', from: 'OSL', to: 'CDG', fromCountry: 'NO', toCountry: 'FR', carrier: 'AF', flight: '1275', source: 'manual', createdAt: 2, order: 0, note: 'Jobbuke i Oslo' },
+  { id: 'a', date: '2026-08-20', from: 'CDG', to: 'OSL', fromCountry: 'FR', toCountry: 'NO', carrier: 'SK', flight: '4703', source: 'barcode', createdAt: 1, updatedAt: 1, order: 0 },
+  { id: 'b', date: '2026-08-28', from: 'OSL', to: 'CDG', fromCountry: 'NO', toCountry: 'FR', carrier: 'AF', flight: '1275', source: 'manual', createdAt: 2, updatedAt: 2, order: 0, note: 'Jobbuke i Oslo' },
 ]
 
 describe('rapport', () => {

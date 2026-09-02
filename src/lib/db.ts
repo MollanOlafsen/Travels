@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
-import type { Segment, Settings, StoredImage } from '../types'
+import type { OutboxItem, Segment, Settings, StoredImage } from '../types'
 import { RULE_DEFS } from './rules'
 
 interface KV {
@@ -9,8 +9,9 @@ interface KV {
 
 class TraveldaysDB extends Dexie {
   segments!: EntityTable<Segment, 'id'>
-  images!: EntityTable<StoredImage, 'id'>
+  photos!: EntityTable<StoredImage, 'id'>
   kv!: EntityTable<KV, 'key'>
+  outbox!: EntityTable<OutboxItem, 'seq'>
 
   constructor() {
     super('traveldays')
@@ -19,6 +20,42 @@ class TraveldaysDB extends Dexie {
       images: '++id, createdAt',
       kv: 'key',
     })
+    // v2: bilder får uuid (synkroniserbare), segmenter får updatedAt, utboks for offline-endringer.
+    this.version(2)
+      .stores({
+        segments: 'id, date, imageId, updatedAt',
+        images: null,
+        photos: 'id, createdAt',
+        kv: 'key',
+        outbox: '++seq',
+      })
+      .upgrade(async (tx) => {
+        const old = (await tx.table('images').toArray()) as Array<{ id: number; blob: Blob; name: string; width: number; height: number; createdAt: number; rawBarcode?: string; ocrText?: string }>
+        const map = new Map<number, string>()
+        for (const img of old) {
+          const id = uid()
+          map.set(img.id, id)
+          await tx.table('photos').add({
+            id,
+            blob: img.blob,
+            name: img.name,
+            mime: img.blob?.type || 'image/jpeg',
+            width: img.width,
+            height: img.height,
+            createdAt: img.createdAt,
+            updatedAt: img.createdAt,
+            rawBarcode: img.rawBarcode,
+            ocrText: img.ocrText,
+          })
+        }
+        await tx
+          .table('segments')
+          .toCollection()
+          .modify((s: Segment & { imageId?: string | number }) => {
+            if (typeof s.imageId === 'number') s.imageId = map.get(s.imageId)
+            if (!s.updatedAt) s.updatedAt = s.createdAt || Date.now()
+          })
+      })
   }
 }
 
@@ -64,27 +101,50 @@ export async function loadSettings(): Promise<Settings> {
   return normalizeSettings(row?.value as Partial<Settings> | undefined)
 }
 
-export async function saveSettings(s: Settings): Promise<void> {
-  await db.kv.put({ key: 'settings', value: s })
+export async function kvGet<T>(key: string): Promise<T | undefined> {
+  return (await db.kv.get(key))?.value as T | undefined
+}
+
+export async function kvSet(key: string, value: unknown): Promise<void> {
+  await db.kv.put({ key, value })
 }
 
 export function uid(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID()
-  return Math.random().toString(36).slice(2) + Date.now().toString(36)
+  const c = globalThis.crypto as Crypto
+  if (typeof c.randomUUID === 'function') return c.randomUUID()
+  // RFC 4122 v4 uten crypto.randomUUID
+  const b = new Uint8Array(16)
+  c.getRandomValues(b)
+  b[6] = (b[6] & 0x0f) | 0x40
+  b[8] = (b[8] & 0x3f) | 0x80
+  const h = [...b].map((x) => x.toString(16).padStart(2, '0')).join('')
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`
 }
 
 /* ---------- Sikkerhetskopi ---------- */
 
-export interface Backup {
-  app: 'traveldays'
-  version: 1
-  exportedAt: string
-  settings: Settings
-  segments: Segment[]
-  images: Array<Omit<StoredImage, 'blob'> & { dataUrl: string }>
+export interface BackupImage {
+  id?: number | string
+  name: string
+  mime?: string
+  width: number
+  height: number
+  createdAt: number
+  rawBarcode?: string | null
+  ocrText?: string | null
+  dataUrl: string
 }
 
-function blobToDataUrl(blob: Blob): Promise<string> {
+export interface Backup {
+  app: 'traveldays'
+  version: 1 | 2
+  exportedAt: string
+  settings: Settings
+  segments: Array<Segment & { imageId?: string | number }>
+  images: BackupImage[]
+}
+
+export function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const r = new FileReader()
     r.onload = () => resolve(r.result as string)
@@ -93,49 +153,29 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   })
 }
 
-async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
+export async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
   const res = await fetch(dataUrl)
   return res.blob()
 }
 
-export async function exportBackup(): Promise<Backup> {
-  const [settings, segments, images] = await Promise.all([loadSettings(), db.segments.toArray(), db.images.toArray()])
-  const imgs = await Promise.all(
-    images.map(async ({ blob, ...rest }) => ({ ...rest, dataUrl: await blobToDataUrl(blob) })),
-  )
-  return { app: 'traveldays', version: 1, exportedAt: new Date().toISOString(), settings, segments, images: imgs }
+/** Lokal eksport (brukes når serveren ikke kan nås). Bilder uten lokal kopi hoppes over. */
+export async function exportLocalBackup(): Promise<Backup> {
+  const [settings, segments, photos] = await Promise.all([loadSettings(), db.segments.toArray(), db.photos.toArray()])
+  const images: BackupImage[] = []
+  for (const p of photos) {
+    if (!p.blob) continue
+    const { blob, updatedAt: _u, ...rest } = p
+    void _u
+    images.push({ ...rest, dataUrl: await blobToDataUrl(blob) })
+  }
+  return { app: 'traveldays', version: 2, exportedAt: new Date().toISOString(), settings, segments, images }
 }
 
-/** Importerer en sikkerhetskopi. `replace` sletter alt først; ellers legges data til (dubletter på id hoppes over). */
-export async function importBackup(b: Backup, replace: boolean): Promise<{ segments: number; images: number }> {
-  if (b.app !== 'traveldays') throw new Error('Filen er ikke en Traveldays-sikkerhetskopi')
-  const idMap = new Map<number, number>()
-  await db.transaction('rw', db.segments, db.images, db.kv, async () => {
-    if (replace) {
-      await db.segments.clear()
-      await db.images.clear()
-    }
-    for (const img of b.images) {
-      const blob = await dataUrlToBlob(img.dataUrl)
-      const { dataUrl: _d, id: oldId, ...rest } = img
-      void _d
-      const newId = (await db.images.add({ ...rest, blob })) as number
-      if (oldId != null) idMap.set(oldId, newId)
-    }
-    for (const seg of b.segments) {
-      if (!replace && (await db.segments.get(seg.id))) continue
-      const imageId = seg.imageId != null ? idMap.get(seg.imageId) : undefined
-      await db.segments.put({ ...seg, imageId })
-    }
-    await db.kv.put({ key: 'settings', value: normalizeSettings(b.settings) })
-  })
-  return { segments: b.segments.length, images: b.images.length }
-}
-
-export async function wipeAll(): Promise<void> {
-  await db.transaction('rw', db.segments, db.images, db.kv, async () => {
+export async function wipeLocal(): Promise<void> {
+  await db.transaction('rw', db.segments, db.photos, db.kv, db.outbox, async () => {
     await db.segments.clear()
-    await db.images.clear()
+    await db.photos.clear()
     await db.kv.clear()
+    await db.outbox.clear()
   })
 }

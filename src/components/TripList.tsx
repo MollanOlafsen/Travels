@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
 import { format, parseISO } from 'date-fns'
 import { nb } from 'date-fns/locale'
 import type { Segment, Settings } from '../types'
-import { db } from '../lib/db'
+import { getImageBlob, store } from '../lib/sync'
 import { countryName } from '../lib/airports'
 import { fmtDate, sortSegments } from '../lib/rules'
 import { SOURCE_LABEL, placeLabel } from '../lib/report'
@@ -11,22 +10,27 @@ import { SegmentForm, type SegmentDraft } from './SegmentForm'
 import { Icon } from './Icon'
 import { useToast } from './Toast'
 
-export function useImageUrl(imageId: number | undefined): string | undefined {
-  const img = useLiveQuery(async () => (imageId != null ? await db.images.get(imageId) : undefined), [imageId])
+export function useImageUrl(imageId: string | undefined): string | undefined {
   const [url, setUrl] = useState<string>()
   useEffect(() => {
-    if (!img) {
-      setUrl(undefined)
-      return
+    let revoked = false
+    let u: string | undefined
+    setUrl(undefined)
+    if (!imageId) return
+    getImageBlob(imageId).then((blob) => {
+      if (revoked || !blob) return
+      u = URL.createObjectURL(blob)
+      setUrl(u)
+    })
+    return () => {
+      revoked = true
+      if (u) URL.revokeObjectURL(u)
     }
-    const u = URL.createObjectURL(img.blob)
-    setUrl(u)
-    return () => URL.revokeObjectURL(u)
-  }, [img])
+  }, [imageId])
   return url
 }
 
-function Thumb({ imageId, onOpen }: { imageId?: number; onOpen: (url: string) => void }) {
+function Thumb({ imageId, onOpen }: { imageId?: string; onOpen: (url: string) => void }) {
   const url = useImageUrl(imageId)
   if (!url) return <div className="thumb" style={{ cursor: 'default' }} />
   return <img src={url} alt="Boardingkort" className="thumb" onClick={() => onOpen(url)} />
@@ -49,19 +53,13 @@ export function TripList({ segments, settings }: { segments: Segment[]; settings
 
   async function remove(s: Segment) {
     if (!confirm(`Slette reisen ${fmtDate(s.date)} ${s.from} → ${s.to}?`)) return
-    await db.transaction('rw', db.segments, db.images, async () => {
-      await db.segments.delete(s.id)
-      if (s.imageId != null) {
-        const others = await db.segments.where('imageId').equals(s.imageId).count()
-        if (others === 0) await db.images.delete(s.imageId)
-      }
-    })
+    await store.deleteSegment(s.id)
     toast('Reisen er slettet.')
   }
 
   async function update(d: SegmentDraft) {
     if (!editing) return
-    await db.segments.update(editing.id, {
+    await store.updateSegment(editing.id, {
       ...d,
       carrier: d.carrier || undefined,
       flight: d.flight || undefined,

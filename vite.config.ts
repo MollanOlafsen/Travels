@@ -3,9 +3,9 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// GitHub Pages serverer appen under /Travels/. Sett VITE_BASE=/ for lokal test av bygget.
+// Appen hostes på Domeneshop under / (travels.mollan-olafsen.fr). VITE_BASE kan overstyre.
 export default defineConfig({
-  base: process.env.VITE_BASE ?? '/Travels/',
+  base: process.env.VITE_BASE ?? '/',
   plugins: [
     react(),
     VitePWA({

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import type { Settings } from './types'
-import { db, loadSettings, saveSettings } from './lib/db'
+import { db, kvGet, kvSet, loadSettings } from './lib/db'
+import { getStatus } from './lib/api'
+import { flush, onSettingsChanged, pull, setSyncState, startSync, store, useSync } from './lib/sync'
 import { Dashboard } from './components/Dashboard'
 import { CalendarView } from './components/CalendarView'
 import { TripList } from './components/TripList'
@@ -9,6 +11,7 @@ import { AddTrip } from './components/AddTrip'
 import { ReportPage } from './components/ReportPage'
 import { RulesPage } from './components/RulesPage'
 import { SettingsPage } from './components/SettingsPage'
+import { Login } from './components/Login'
 import { Icon, type IconName } from './components/Icon'
 import { ToastContext, useToastState } from './components/Toast'
 
@@ -29,10 +32,32 @@ export default function App() {
   const [settings, setSettingsState] = useState<Settings | null>(null)
   const segments = useLiveQuery(() => db.segments.toArray(), [], undefined)
   const toast = useToastState()
+  const sync = useSync()
+
+  // Oppstart: sjekk innlogging mot serveren; offline → bruk lokal kopi hvis vi har vært innlogget før
+  useEffect(() => {
+    startSync()
+    ;(async () => {
+      try {
+        const st = await getStatus()
+        if (!st.installed) setSyncState({ auth: 'setup' })
+        else if (st.authenticated) {
+          setSyncState({ auth: 'in', email: st.email ?? null, totpEnabled: Boolean(st.totpEnabled) })
+          await kvSet('account', st.email ?? '')
+          void pull()
+        } else setSyncState({ auth: 'out' })
+      } catch {
+        const account = await kvGet<string>('account')
+        if (account) setSyncState({ auth: 'in', email: account, online: false, lastError: 'Ingen kontakt med serveren – viser lokal kopi' })
+        else setSyncState({ auth: 'out', lastError: 'Ingen kontakt med serveren' })
+      }
+    })()
+  }, [])
 
   useEffect(() => {
     loadSettings().then(setSettingsState)
-  }, [])
+    return onSettingsChanged(setSettingsState)
+  }, [sync.auth])
 
   useEffect(() => {
     history.replaceState(null, '', `#${tab}`)
@@ -41,10 +66,10 @@ export default function App() {
 
   const setSettings = useCallback(async (s: Settings) => {
     setSettingsState(s)
-    await saveSettings(s)
+    await store.saveSettings(s)
   }, [])
 
-  if (!settings || !segments) {
+  if (sync.auth === 'loading') {
     return (
       <div className="app-header">
         <div className="inner">
@@ -57,6 +82,24 @@ export default function App() {
     )
   }
 
+  if (sync.auth === 'out' || sync.auth === 'setup') {
+    return (
+      <>
+        <header className="app-header">
+          <div className="inner">
+            <div className="brand">
+              <h1>Traveldays</h1>
+              <small>Paris · Oslo</small>
+            </div>
+          </div>
+        </header>
+        <Login setupNeeded={sync.auth === 'setup'} />
+      </>
+    )
+  }
+
+  if (!settings || !segments) return null
+
   const nav = (cls: string) => (
     <nav className={cls}>
       {TABS.map((t) => (
@@ -68,6 +111,9 @@ export default function App() {
     </nav>
   )
 
+  const syncDot = !sync.online ? 'offline' : sync.pending > 0 || sync.syncing ? 'pending' : 'ok'
+  const syncTitle = !sync.online ? 'Frakoblet – endringer sendes når nettet er tilbake' : sync.pending > 0 ? `${sync.pending} endring${sync.pending === 1 ? '' : 'er'} venter` : sync.syncing ? 'Synkroniserer …' : 'Synkronisert'
+
   return (
     <ToastContext.Provider value={toast.show}>
       <header className="app-header">
@@ -75,11 +121,17 @@ export default function App() {
           <div className="brand">
             <h1>Traveldays</h1>
             <small>{settings.postCity || 'Paris'} · Oslo</small>
+            <button className={`syncdot ${syncDot}`} title={syncTitle} aria-label={syncTitle} onClick={() => { void pull(); void flush() }} />
           </div>
           {nav('nav-top')}
         </div>
       </header>
       <main>
+        {sync.lastError && (
+          <div className="notice warn" style={{ marginBottom: 14 }}>
+            {sync.lastError}
+          </div>
+        )}
         {!settings.name && tab !== 'settings' && (
           <div className="notice warn" style={{ marginBottom: 14 }}>
             Fyll inn navn og startdato for utsendelsen under{' '}

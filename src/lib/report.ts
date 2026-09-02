@@ -79,7 +79,7 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 
 export async function buildPdf(
   segments: Segment[],
-  images: Map<number, StoredImage>,
+  images: Map<string, StoredImage>,
   s: Settings,
   opts: ReportOptions,
   today: string,
@@ -249,7 +249,7 @@ export async function buildPdf(
   // Vedlegg: boardingkort
   if (opts.includeImages) {
     const withImg = segs.filter((x) => x.imageId != null && images.has(x.imageId))
-    const seen = new Set<number>()
+    const seen = new Set<string>()
     let n = 0
     for (const x of withImg) {
       if (seen.has(x.imageId!)) continue
@@ -261,6 +261,7 @@ export async function buildPdf(
       doc.setFont('helvetica', 'bold')
       doc.text(`Vedlegg ${n} – ${fmtDate(x.date)} ${x.from} – ${x.to} ${[x.carrier, x.flight].filter(Boolean).join(' ')}`, margin, 18)
       doc.setFont('helvetica', 'normal')
+      if (!img.blob) continue
       const dataUrl = await blobToDataUrl(img.blob)
       const maxW = pageW - margin * 2
       const maxH = doc.internal.pageSize.getHeight() - 40
