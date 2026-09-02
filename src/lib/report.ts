@@ -120,7 +120,15 @@ export async function buildPdf(
     y += 6
   }
   if (s.address) {
-    doc.text(`Fast adresse: ${s.address}`, margin, y)
+    doc.text(`Fast adresse (hjem): ${s.address}`, margin, y)
+    y += 6
+  }
+  if (s.commuterAddress) {
+    doc.text(`Pendlerbolig ved arbeidsopphold i ${countryName(s.homeCountry)}: ${s.commuterAddress}`, margin, y)
+    y += 6
+  }
+  if (s.employer) {
+    doc.text(`Arbeidsgiver/arbeidssted: ${s.employer}`, margin, y)
     y += 6
   }
   doc.text(`Periode: ${fmtDate(opts.from)} – ${fmtDate(opts.to)}`, margin, y)

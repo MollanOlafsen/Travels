@@ -11,6 +11,8 @@ const settings: Settings = {
   postCity: 'Paris',
   homeCountry: 'NO',
   address: '',
+  commuterAddress: '',
+  employer: '',
   postingStart: '2026-08-05',
   serviceStart: '2026-08-10',
   initialCountry: 'FR',

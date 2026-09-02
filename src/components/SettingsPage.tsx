@@ -86,6 +86,16 @@ export function SettingsPage({ settings, onChange }: { settings: Settings; onCha
           Fast adresse på tjenestestedet (vises i rapporten)
           <input value={draft.address} onChange={(e) => set('address', e.target.value)} placeholder="Gate og nummer, postnummer by, land" autoComplete="street-address" />
         </label>
+        <div className="form-grid" style={{ marginTop: 12 }}>
+          <label className="field">
+            Pendlerbolig i Norge (for Skatteetaten)
+            <input value={draft.commuterAddress} onChange={(e) => set('commuterAddress', e.target.value)} placeholder="Gate og nummer, postnummer by" />
+          </label>
+          <label className="field">
+            Arbeidsgiver og arbeidssted i Norge
+            <input value={draft.employer} onChange={(e) => set('employer', e.target.value)} placeholder="Firma AS, sted" />
+          </label>
+        </div>
       </div>
 
       <div className="card">

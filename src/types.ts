@@ -66,6 +66,10 @@ export interface Settings {
   homeCountry: string
   /** Fast adresse på tjenestestedet (vises i rapporten) */
   address: string
+  /** Pendlerbolig i hjemlandet (vises i rapporten – Skatteetaten) */
+  commuterAddress: string
+  /** Arbeidsgiver og arbeidssted i hjemlandet (vises i rapporten) */
+  employer: string
   /** Dagen du flyttet inn på tjenestestedet – dagsloggen starter her (YYYY-MM-DD) */
   postingStart: string
   /** Den utsendtes tiltredelsesdato – UD-tellingen («tjenestetid») starter her (særavtalen § 6.1) */
