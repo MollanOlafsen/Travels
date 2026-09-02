@@ -2,7 +2,7 @@
 
 Dagslogg for medfølgende ektefelle i utenrikstjenesten: teller dager i Paris/Frankrike, Norge og andre land, leser boardingkort fra bilde, og lager rapport til ambassaden og Skatteetaten.
 
-**App:** https://travels.mollan-olafsen.no (Domeneshop, egen MySQL-database, innlogging med tofaktor)
+**App:** https://travels.mollan-olafsen.fr (Domeneshop, egen MySQL-database, innlogging med tofaktor)
 
 ## Hva den gjør
 
