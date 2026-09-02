@@ -2,7 +2,7 @@
 
 Dagslogg for medfølgende ektefelle i utenrikstjenesten: teller dager i Paris/Frankrike, Norge og andre land, leser boardingkort fra bilde, og lager rapport til ambassaden og Skatteetaten.
 
-**App:** https://mollanolafsen.github.io/Travels/
+**App:** https://travels.mollan-olafsen.fr (Domeneshop, egen MySQL-database, innlogging med tofaktor)
 
 ## Hva den gjør
 
@@ -10,20 +10,20 @@ Dagslogg for medfølgende ektefelle i utenrikstjenesten: teller dager i Paris/Fr
 - **Dagtelling.** Ut fra reisene beregnes hvor man har oppholdt seg hver dag (hele og deler av døgn), hvor man har overnattet, sammenhengende fravær fra tjenestestedet og besøksreiser hjem.
 - **Regler med kilder.** Status mot UD-særavtalen (fast bosatt ≥ 50 %, fravær maks 3 måneder), Skatteetatens pendlerregler (besøksreiser, døgnhvile) og 183-dagersregelen. Alle grenser kan justeres, og hver regel viser kilde.
 - **Rapport.** PDF med månedssammendrag, regelstatus, reiseliste, erklæring/underskrift og boardingkortene som vedlegg. CSV for reiser og dager. Deles via delingsarket på mobil.
-- **Personvern.** Ingen server. Alt ligger i nettleserens IndexedDB. Sikkerhetskopi som JSON (med bilder) kan lastes ned og gjenopprettes.
+- **Sikkerhet.** Dataene ligger i en egen MySQL-database på Domeneshop bak innlogging (Argon2id-passord, valgfri tofaktor/TOTP, httpOnly-sesjonscookie, rate-limit, audit-logg). Boardingkort-bildene krypteres med libsodium og lagres utenfor webroten. Nettleseren har en lokal kopi (IndexedDB) for offline-bruk som synkroniseres automatisk.
 - **PWA.** Kan installeres på hjemskjermen (iPhone: Del → Legg til på Hjem-skjerm). Virker offline etter første besøk (OCR-modellen krever nett første gang).
 
 ## Utvikling
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173/Travels/
+npm run dev        # http://localhost:5173 (API-et krever PHP – bruk serveren for innlogging)
 npm test           # vitest: BCBP-parser, OCR-tolkning, regelmotor
 npm run build      # dist/
 node scripts/make-icons.mjs   # regenererer PNG-ikoner
 ```
 
-Publisering skjer automatisk til GitHub Pages ved push til `main` (`.github/workflows/deploy.yml`). Repo-innstilling: Settings → Pages → Source: **GitHub Actions**.
+**Deploy:** `bash deploy.sh` bygger og laster opp til `~/travels` på Domeneshop over SSH. Engangsoppsett på ny server: åpne `/api/setup.php` (skriver `~/travels_private/config.php` utenfor webroten – aldri i repoet).
 
 ## Kilder for reglene (hentet 2. september 2026)
 
