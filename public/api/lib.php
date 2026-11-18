@@ -99,6 +99,7 @@ function td_ensure_tables(PDO $pdo): void
         data LONGTEXT NOT NULL,
         updated_at BIGINT NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    td_ensure_visits($pdo);
     $pdo->exec('CREATE TABLE IF NOT EXISTS td_audit (
         id INT AUTO_INCREMENT PRIMARY KEY,
         ts BIGINT NOT NULL,
@@ -108,6 +109,25 @@ function td_ensure_tables(PDO $pdo): void
         detail VARCHAR(255) NULL,
         INDEX (ts)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/** Besøkstabellen (regionsmålet) kom etter første versjon – opprettes ved behov på eksisterende installasjoner. */
+function td_ensure_visits(PDO $pdo): void
+{
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $pdo->exec('CREATE TABLE IF NOT EXISTS td_visits (
+        id CHAR(36) PRIMARY KEY,
+        date CHAR(10) NOT NULL,
+        dept VARCHAR(3) NOT NULL,
+        data LONGTEXT NOT NULL,
+        updated_at BIGINT NOT NULL,
+        deleted TINYINT NOT NULL DEFAULT 0,
+        INDEX (updated_at), INDEX (date)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    $done = true;
 }
 
 /* ---------- HTTP-hjelpere ---------- */

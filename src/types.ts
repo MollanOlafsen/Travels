@@ -90,12 +90,40 @@ export interface Settings {
   rules: RuleConfig[]
   /** Egendefinerte flyplasser: IATA → land */
   customAirports: Record<string, { country: string; city: string }>
+  /** Regionsmålet: tell Île-de-France som besøkt fordi man bor der */
+  franceHomeCounts: boolean
+  /** Reiser (segment-id) som ikke skal foreslås som besøk */
+  franceDismissed: string[]
+}
+
+/** Ett besøk i et fransk departement (regionsmålet «Tour de France»). */
+export interface Visit {
+  id: string
+  /** YYYY-MM-DD */
+  date: string
+  /** YYYY-MM-DD, siste dag – bare satt for flerdagersbesøk */
+  endDate?: string
+  /** Departementskode, f.eks. «69» eller «2A» */
+  dept: string
+  /** By eller sted, f.eks. «Lyon» */
+  place?: string
+  note?: string
+  /** Bilder (uuid-er i samme bildelager som boardingkortene) */
+  photoIds?: string[]
+  /** Posisjon hvis registrert med GPS eller valgt fra kjent by */
+  lat?: number
+  lon?: number
+  source?: 'manual' | 'gps' | 'trip'
+  /** Reisen besøket ble foreslått fra */
+  segmentId?: string
+  createdAt: number
+  updatedAt: number
 }
 
 /** Kø av endringer som skal sendes til serveren (offline-støtte). */
 export interface OutboxItem {
   seq?: number
-  kind: 'segment' | 'segmentDelete' | 'image' | 'imageDelete' | 'settings'
+  kind: 'segment' | 'segmentDelete' | 'visit' | 'visitDelete' | 'image' | 'imageDelete' | 'settings'
   id?: string
   ts: number
 }

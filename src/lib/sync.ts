@@ -1,7 +1,7 @@
 // Synkronisering mellom lokal IndexedDB og serveren.
 // Skriv alltid via `store` – det lagrer lokalt, legger i utboksen og sender når nettet er der.
 import { useEffect, useState } from 'react'
-import type { Segment, Settings, StoredImage } from '../types'
+import type { Segment, Settings, StoredImage, Visit } from '../types'
 import { db, kvGet, kvSet, loadSettings, normalizeSettings } from './db'
 import { API_BASE, ApiError, api } from './api'
 
@@ -102,6 +102,38 @@ export const store = {
           await db.outbox.add({ kind: 'imageDelete', id: seg.imageId, ts: Date.now() })
         }
       }
+    })
+    void flush()
+  },
+
+  async putVisit(v: Visit): Promise<void> {
+    v.updatedAt = Date.now()
+    await db.transaction('rw', db.visits, db.outbox, async () => {
+      await db.visits.put(v)
+      await db.outbox.add({ kind: 'visit', id: v.id, ts: Date.now() })
+    })
+    void flush()
+  },
+
+  /** Sletter besøket og bildene som bare det brukte. */
+  async deleteVisit(id: string): Promise<void> {
+    await db.transaction('rw', db.visits, db.photos, db.outbox, async () => {
+      const v = await db.visits.get(id)
+      await db.visits.delete(id)
+      await db.outbox.add({ kind: 'visitDelete', id, ts: Date.now() })
+      for (const pid of v?.photoIds ?? []) {
+        await db.photos.delete(pid)
+        await db.outbox.add({ kind: 'imageDelete', id: pid, ts: Date.now() })
+      }
+    })
+    void flush()
+  },
+
+  /** Fjerner ett bilde (brukes når et bilde tas ut av et besøk). */
+  async deleteImage(id: string): Promise<void> {
+    await db.transaction('rw', db.photos, db.outbox, async () => {
+      await db.photos.delete(id)
+      await db.outbox.add({ kind: 'imageDelete', id, ts: Date.now() })
     })
     void flush()
   },
@@ -227,6 +259,15 @@ async function send(it: { kind: string; id?: string }): Promise<void> {
     case 'segmentDelete':
       await api('segments.php', { body: { op: 'delete', id: it.id } })
       return
+    case 'visit': {
+      const v = await db.visits.get(it.id!)
+      if (!v) return
+      await api('visits.php', { body: { op: 'put', visit: v } })
+      return
+    }
+    case 'visitDelete':
+      await api('visits.php', { body: { op: 'delete', id: it.id } })
+      return
     case 'image': {
       const img = await db.photos.get(it.id!)
       if (!img?.blob) return
@@ -254,6 +295,8 @@ async function send(it: { kind: string; id?: string }): Promise<void> {
 interface SyncPayload {
   now: number
   segments: Array<{ id: string; deleted: boolean; updatedAt: number; data: Segment | null }>
+  /** Mangler hvis serveren kjører en eldre versjon av API-et */
+  visits?: Array<{ id: string; deleted: boolean; updatedAt: number; data: Visit | null }>
   images: Array<Omit<StoredImage, 'blob'> & { deleted: boolean }>
   settings: { data: Settings; updatedAt: number } | null
   serverSegmentCount: number
@@ -271,7 +314,7 @@ export async function pull(): Promise<void> {
     const pendingIds = new Set((await db.outbox.toArray()).map((o) => `${o.kind}:${o.id ?? ''}`))
     let settingsChanged: Settings | null = null
 
-    await db.transaction('rw', db.segments, db.photos, db.kv, async () => {
+    await db.transaction('rw', [db.segments, db.visits, db.photos, db.kv], async () => {
       for (const r of p.segments) {
         if (pendingIds.has(`segment:${r.id}`) || pendingIds.has(`segmentDelete:${r.id}`)) continue
         if (r.deleted) {
@@ -280,6 +323,15 @@ export async function pull(): Promise<void> {
         }
         const local = await db.segments.get(r.id)
         if (!local || local.updatedAt < r.updatedAt) await db.segments.put({ ...r.data!, updatedAt: r.updatedAt })
+      }
+      for (const r of p.visits ?? []) {
+        if (pendingIds.has(`visit:${r.id}`) || pendingIds.has(`visitDelete:${r.id}`)) continue
+        if (r.deleted) {
+          await db.visits.delete(r.id)
+          continue
+        }
+        const local = await db.visits.get(r.id)
+        if (!local || local.updatedAt < r.updatedAt) await db.visits.put({ ...r.data!, updatedAt: r.updatedAt })
       }
       for (const r of p.images) {
         if (pendingIds.has(`image:${r.id}`) || pendingIds.has(`imageDelete:${r.id}`)) continue
@@ -308,11 +360,14 @@ export async function pull(): Promise<void> {
     if (since === 0) {
       const remoteSegs = new Set(p.segments.map((r) => r.id))
       const remoteImgs = new Set(p.images.map((r) => r.id))
+      const remoteVisits = new Set((p.visits ?? []).map((r) => r.id))
+      const localVisits = await db.visits.toArray()
       const localSegs = await db.segments.toArray()
       const localImgs = await db.photos.toArray()
       const now = Date.now()
       await db.transaction('rw', db.outbox, db.kv, async () => {
         for (const s of localSegs) if (!remoteSegs.has(s.id)) await db.outbox.add({ kind: 'segment', id: s.id, ts: now })
+        for (const v of localVisits) if (!remoteVisits.has(v.id)) await db.outbox.add({ kind: 'visit', id: v.id, ts: now })
         for (const i of localImgs) if (!remoteImgs.has(i.id) && i.blob) await db.outbox.add({ kind: 'image', id: i.id, ts: now })
         if (!p.settings) {
           const hasLocal = (await db.kv.get('settings')) !== undefined

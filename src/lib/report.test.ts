@@ -20,6 +20,8 @@ const settings: Settings = {
   travelDayCountsBoth: true,
   rules: RULE_DEFS.map((r) => ({ id: r.id, enabled: r.defaultEnabled, params: { ...r.defaultParams } })),
   customAirports: {},
+  franceHomeCounts: true,
+  franceDismissed: [],
 }
 
 const segs: Segment[] = [
