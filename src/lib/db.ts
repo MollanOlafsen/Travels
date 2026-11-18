@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
-import type { OutboxItem, Segment, Settings, StoredImage, Visit } from '../types'
+import type { OutboxItem, Segment, Settings, StoredImage } from '../types'
 import { RULE_DEFS } from './rules'
 
 interface KV {
@@ -9,7 +9,6 @@ interface KV {
 
 class TraveldaysDB extends Dexie {
   segments!: EntityTable<Segment, 'id'>
-  visits!: EntityTable<Visit, 'id'>
   photos!: EntityTable<StoredImage, 'id'>
   kv!: EntityTable<KV, 'key'>
   outbox!: EntityTable<OutboxItem, 'seq'>
@@ -57,14 +56,6 @@ class TraveldaysDB extends Dexie {
             if (!s.updatedAt) s.updatedAt = s.createdAt || Date.now()
           })
       })
-    // v3: besøk i franske departementer (regionsmålet)
-    this.version(3).stores({
-      segments: 'id, date, imageId, updatedAt',
-      visits: 'id, date, dept, updatedAt',
-      photos: 'id, createdAt',
-      kv: 'key',
-      outbox: '++seq',
-    })
   }
 }
 
@@ -86,8 +77,6 @@ export const DEFAULT_SETTINGS: Settings = {
   travelDayCountsBoth: true,
   rules: RULE_DEFS.map((r) => ({ id: r.id, enabled: r.defaultEnabled, params: { ...r.defaultParams } })),
   customAirports: {},
-  franceHomeCounts: true,
-  franceDismissed: [],
 }
 
 /** Slår sammen lagrede innstillinger med standardverdier (nye regler får standardoppsett). */
@@ -103,7 +92,6 @@ export function normalizeSettings(raw: Partial<Settings> | undefined): Settings 
     }
   })
   s.customAirports = raw?.customAirports ?? {}
-  s.franceDismissed = raw?.franceDismissed ?? []
   if (!s.serviceStart) s.serviceStart = s.postingStart
   return s
 }
@@ -153,7 +141,6 @@ export interface Backup {
   exportedAt: string
   settings: Settings
   segments: Array<Segment & { imageId?: string | number }>
-  visits?: Visit[]
   images: BackupImage[]
 }
 
@@ -173,7 +160,7 @@ export async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
 
 /** Lokal eksport (brukes når serveren ikke kan nås). Bilder uten lokal kopi hoppes over. */
 export async function exportLocalBackup(): Promise<Backup> {
-  const [settings, segments, visits, photos] = await Promise.all([loadSettings(), db.segments.toArray(), db.visits.toArray(), db.photos.toArray()])
+  const [settings, segments, photos] = await Promise.all([loadSettings(), db.segments.toArray(), db.photos.toArray()])
   const images: BackupImage[] = []
   for (const p of photos) {
     if (!p.blob) continue
@@ -181,13 +168,12 @@ export async function exportLocalBackup(): Promise<Backup> {
     void _u
     images.push({ ...rest, dataUrl: await blobToDataUrl(blob) })
   }
-  return { app: 'traveldays', version: 2, exportedAt: new Date().toISOString(), settings, segments, visits, images }
+  return { app: 'traveldays', version: 2, exportedAt: new Date().toISOString(), settings, segments, images }
 }
 
 export async function wipeLocal(): Promise<void> {
-  await db.transaction('rw', [db.segments, db.visits, db.photos, db.kv, db.outbox], async () => {
+  await db.transaction('rw', db.segments, db.photos, db.kv, db.outbox, async () => {
     await db.segments.clear()
-    await db.visits.clear()
     await db.photos.clear()
     await db.kv.clear()
     await db.outbox.clear()

@@ -78,15 +78,8 @@ export function SettingsPage({ settings, onChange }: { settings: Settings; onCha
         await store.putSegment({ ...seg, imageId, updatedAt: Date.now() })
         nSeg++
       }
-      let nVis = 0
-      for (const v of b.visits ?? []) {
-        if (await db.visits.get(v.id)) continue
-        const photoIds = (v.photoIds ?? []).map((p) => idMap.get(p)).filter((p): p is string => Boolean(p))
-        await store.putVisit({ ...v, photoIds, updatedAt: Date.now() })
-        nVis++
-      }
       if (b.settings) await onChange(normalizeSettings(b.settings))
-      toast(`Importerte ${nSeg} reiser, ${nVis} besøk og ${nImg} bilder.`)
+      toast(`Importerte ${nSeg} reiser og ${nImg} bilder.`)
     } catch (e) {
       console.error(e)
       toast('Kunne ikke lese sikkerhetskopien.')

@@ -1,4 +1,4 @@
-export type IconName = 'home' | 'calendar' | 'plus' | 'plane' | 'doc' | 'scale' | 'gear' | 'camera' | 'trash' | 'edit' | 'share' | 'download' | 'map'
+export type IconName = 'home' | 'calendar' | 'plus' | 'plane' | 'doc' | 'scale' | 'gear' | 'camera' | 'trash' | 'edit' | 'share' | 'download'
 
 const PATHS: Record<IconName, string> = {
   home: 'M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
@@ -13,7 +13,6 @@ const PATHS: Record<IconName, string> = {
   edit: 'M4 20h4l11-11-4-4L4 16zM13 7l4 4',
   share: 'M12 3v12M8 7l4-4 4 4M5 13v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6',
   download: 'M12 3v12M8 11l4 4 4-4M5 19h14',
-  map: 'M9 4 3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5zM9 4v13.5M15 6.5V20',
 }
 
 export function Icon({ name, size = 22 }: { name: IconName; size?: number }) {
