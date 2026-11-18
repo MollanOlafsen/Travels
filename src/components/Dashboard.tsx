@@ -1,12 +1,10 @@
 import { useMemo } from 'react'
-import type { Segment, Settings, Visit } from '../types'
-import { REGION_INFO, TOTAL_REGIONS, computeFrance } from '../lib/france'
+import type { Segment, Settings } from '../types'
 import { countryName } from '../lib/airports'
 import { RULE_MAP, computePresence, currentLocation, evaluateRules, fmtDate, todayISO, yearSummary } from '../lib/rules'
 import { STATUS_LABEL } from '../lib/report'
 
-export function Dashboard({ segments, visits, settings, onGoTo }: { segments: Segment[]; visits: Visit[]; settings: Settings; onGoTo: (tab: string) => void }) {
-  const france = useMemo(() => computeFrance(visits, settings), [visits, settings])
+export function Dashboard({ segments, settings, onGoTo }: { segments: Segment[]; settings: Settings; onGoTo: (tab: string) => void }) {
   const today = todayISO()
   const { results, loc, ys, year } = useMemo(() => {
     const p = computePresence(segments, settings, today)
@@ -51,25 +49,6 @@ export function Dashboard({ segments, visits, settings, onGoTo }: { segments: Se
           </button>
         </div>
       </section>
-
-      <button className="card fr-teaser" onClick={() => onGoTo('france')}>
-        <div>
-          <div className="eyebrow">Tour de France</div>
-          <div className="fr-teaser-count">
-            {france.regionsVisited} <small>/ {TOTAL_REGIONS} regioner</small>
-          </div>
-          <div className="small muted">
-            {france.level.emoji} {france.level.title} · {france.deptsVisited.size} departementer
-          </div>
-        </div>
-        <div className="fr-teaser-dots" aria-hidden="true">
-          {france.regions.map((r) => (
-            <span key={r.code} style={{ background: r.visited ? REGION_INFO[r.code].color : undefined }}>
-              {r.visited ? REGION_INFO[r.code].emoji : ''}
-            </span>
-          ))}
-        </div>
-      </button>
 
       <section className="card">
         <div className="row between">
