@@ -13,6 +13,11 @@ $segments = [];
 foreach ($pdo->query('SELECT data FROM td_segments WHERE deleted = 0 ORDER BY date') as $r) {
     $segments[] = json_decode($r['data'], true);
 }
+td_ensure_visits($pdo);
+$visits = [];
+foreach ($pdo->query('SELECT data FROM td_visits WHERE deleted = 0 ORDER BY date') as $r) {
+    $visits[] = json_decode($r['data'], true);
+}
 $images = [];
 foreach ($pdo->query('SELECT * FROM td_images WHERE deleted = 0') as $r) {
     $plain = td_decrypt_file(td_image_path($r['id']));
@@ -33,4 +38,4 @@ foreach ($pdo->query('SELECT * FROM td_images WHERE deleted = 0') as $r) {
 }
 td_audit('backup_downloaded');
 header('Content-Disposition: attachment; filename="traveldays-sikkerhetskopi-' . gmdate('Y-m-d') . '.json"');
-td_json(['app' => 'traveldays', 'version' => 2, 'exportedAt' => gmdate('c'), 'settings' => $settings, 'segments' => $segments, 'images' => $images]);
+td_json(['app' => 'traveldays', 'version' => 2, 'exportedAt' => gmdate('c'), 'settings' => $settings, 'segments' => $segments, 'visits' => $visits, 'images' => $images]);

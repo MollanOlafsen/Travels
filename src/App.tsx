@@ -11,19 +11,22 @@ import { AddTrip } from './components/AddTrip'
 import { ReportPage } from './components/ReportPage'
 import { RulesPage } from './components/RulesPage'
 import { SettingsPage } from './components/SettingsPage'
+import { FrancePage } from './components/FrancePage'
 import { Login } from './components/Login'
 import { Icon, type IconName } from './components/Icon'
 import { ToastContext, useToastState } from './components/Toast'
 
-type Tab = 'home' | 'calendar' | 'trips' | 'add' | 'report' | 'rules' | 'settings'
+type Tab = 'home' | 'france' | 'calendar' | 'trips' | 'add' | 'report' | 'rules' | 'settings'
 
-const TABS: { id: Tab; label: string; icon: IconName }[] = [
+// «Regler» vises bare i toppmenyen på stor skjerm (nås fra Oversikt på mobil) – bunnmenyen har plass til sju.
+const TABS: { id: Tab; label: string; icon: IconName; desktopOnly?: boolean }[] = [
   { id: 'home', label: 'Oversikt', icon: 'home' },
+  { id: 'france', label: 'Frankrike', icon: 'map' },
   { id: 'calendar', label: 'Kalender', icon: 'calendar' },
   { id: 'add', label: 'Legg til', icon: 'plus' },
   { id: 'trips', label: 'Reiser', icon: 'plane' },
   { id: 'report', label: 'Rapport', icon: 'doc' },
-  { id: 'rules', label: 'Regler', icon: 'scale' },
+  { id: 'rules', label: 'Regler', icon: 'scale', desktopOnly: true },
   { id: 'settings', label: 'Innstillinger', icon: 'gear' },
 ]
 
@@ -31,6 +34,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>(() => (location.hash.slice(1) as Tab) || 'home')
   const [settings, setSettingsState] = useState<Settings | null>(null)
   const segments = useLiveQuery(() => db.segments.toArray(), [], undefined)
+  const visits = useLiveQuery(() => db.visits.toArray(), [], undefined)
   const toast = useToastState()
   const sync = useSync()
 
@@ -98,11 +102,11 @@ export default function App() {
     )
   }
 
-  if (!settings || !segments) return null
+  if (!settings || !segments || !visits) return null
 
   const nav = (cls: string) => (
     <nav className={cls}>
-      {TABS.map((t) => (
+      {TABS.filter((t) => cls === 'nav-top' || !t.desktopOnly).map((t) => (
         <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => setTab(t.id)} aria-label={t.label}>
           <Icon name={t.icon} />
           <span>{t.label}</span>
@@ -132,7 +136,7 @@ export default function App() {
             {sync.lastError}
           </div>
         )}
-        {!settings.name && tab !== 'settings' && (
+        {!settings.name && tab !== 'settings' && tab !== 'france' && (
           <div className="notice warn" style={{ marginBottom: 14 }}>
             Fyll inn navn og startdato for utsendelsen under{' '}
             <a href="#settings" onClick={(e) => { e.preventDefault(); setTab('settings') }}>
@@ -141,7 +145,8 @@ export default function App() {
             før du lager rapporter.
           </div>
         )}
-        {tab === 'home' && <Dashboard segments={segments} settings={settings} onGoTo={(t) => setTab(t as Tab)} />}
+        {tab === 'home' && <Dashboard segments={segments} visits={visits} settings={settings} onGoTo={(t) => setTab(t as Tab)} />}
+        {tab === 'france' && <FrancePage visits={visits} segments={segments} settings={settings} onSettings={setSettings} />}
         {tab === 'calendar' && <CalendarView segments={segments} settings={settings} />}
         {tab === 'trips' && <TripList segments={segments} settings={settings} />}
         {tab === 'add' && <AddTrip settings={settings} onDone={() => setTab('trips')} />}

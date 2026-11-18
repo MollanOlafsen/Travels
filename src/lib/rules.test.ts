@@ -18,6 +18,8 @@ const settings: Settings = {
   travelDayCountsBoth: true,
   rules: RULE_DEFS.map((r) => ({ id: r.id, enabled: true, params: { ...r.defaultParams } })),
   customAirports: {},
+  franceHomeCounts: true,
+  franceDismissed: [],
 }
 
 let n = 0

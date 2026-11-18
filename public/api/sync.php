@@ -34,6 +34,14 @@ foreach ($st as $r) {
     ];
 }
 
+td_ensure_visits($pdo);
+$visits = [];
+$st = $pdo->prepare('SELECT id, data, updated_at, deleted FROM td_visits WHERE updated_at > ?' . ($since === 0 ? ' AND deleted = 0' : ''));
+$st->execute([$since]);
+foreach ($st as $r) {
+    $visits[] = ['id' => $r['id'], 'deleted' => (bool) $r['deleted'], 'updatedAt' => (int) $r['updated_at'], 'data' => (int) $r['deleted'] ? null : json_decode($r['data'], true)];
+}
+
 $settings = null;
 $st = $pdo->prepare('SELECT data, updated_at FROM td_settings WHERE id = 1 AND updated_at > ?');
 $st->execute([$since]);
@@ -43,4 +51,4 @@ if ($r = $st->fetch()) {
 
 $cnt = (int) $pdo->query('SELECT COUNT(*) c FROM td_segments WHERE deleted = 0')->fetch()['c'];
 
-td_json(['now' => $now, 'segments' => $segs, 'images' => $imgs, 'settings' => $settings, 'serverSegmentCount' => $cnt]);
+td_json(['now' => $now, 'segments' => $segs, 'visits' => $visits, 'images' => $imgs, 'settings' => $settings, 'serverSegmentCount' => $cnt]);
